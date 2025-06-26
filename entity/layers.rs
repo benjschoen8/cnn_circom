@@ -4,7 +4,7 @@ pub struct Layers {
     pub layers: Vec<Box<dyn Layer>>,
 }
 
-impl Layers {
+impl Layer for Layers {
     pub fn new() -> Self {
         Self { layers: Vec::new() }
     }
