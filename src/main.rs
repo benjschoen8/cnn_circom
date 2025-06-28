@@ -1,15 +1,18 @@
 mod framework;
 mod adapter;
+mod usecase;
 
-use framework::pytorch::Pytorch;
+use crate::framework::pytorch::Pytorch;
 use crate::adapter::python_embedding::PythonEmbedding;
+use crate::adapter::python_trainer::PythonTrainer;
+use crate::usecase::trainer::Trainer;
 
 fn main() {
-    let trainer = Pytorch::new();
+    let trainer = PythonTrainer::new(Box::new(Pytorch::new()));
     let dataset_path = "framework/python/data";
 
     match trainer.train(dataset_path) {
-        Ok(json) => println!("Training completed successfully:\n{}", json),
-        Err(e) => eprintln!("Training failed: {}", e),
+        Ok(string) => println!("{}", string),
+        Err(e) => eprintln!("error!\n{}", e),
     }
 }

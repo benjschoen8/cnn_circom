@@ -1,4 +1,4 @@
-use crate::usecase::UseCase;
+use crate::usecase::usecase::UseCase;
 
 pub struct MakeCircomCircuitUseCase {
     // You can add fields like model, path, etc. later

@@ -1,4 +1,4 @@
-use crate::writer::Writer;
+use crate::usecase::writer::Writer;
 
 pub struct CircomWriter {
     // Empty CircomWriter structure

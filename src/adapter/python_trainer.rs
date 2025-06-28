@@ -1,13 +1,18 @@
+use crate::adapter::python_embedding::PythonEmbedding;
+use crate::usecase::trainer::Trainer;
+
 pub struct PythonTrainer {
-    pub script_path: String,
-    pub trained_model: Option<String>, // Model could be a file path, JSON string, etc.
+    pub trainer: Box<dyn PythonEmbedding>,
 }
 
 impl PythonTrainer {
-    pub fn new(script_path: String) -> Self {
-        Self {
-            script_path,
-            trained_model: None,
-        }
+    pub fn new(trainer: Box<dyn PythonEmbedding>) -> Self {
+        Self { trainer }
+    }
+}
+
+impl Trainer for PythonTrainer {
+    fn train(&self, data_path: &str) -> Result<String, String> {
+        self.trainer.train(data_path)
     }
 }

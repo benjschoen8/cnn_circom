@@ -1,5 +1,3 @@
-use crate::model::Model;
-
 pub struct ModelParser;
 
 impl ModelParser {
@@ -7,7 +5,7 @@ impl ModelParser {
         Self {}
     }
 
-    pub fn parse_model(&self) -> Model {
+    pub fn parse_model(&self) {
         //
     }
 }
