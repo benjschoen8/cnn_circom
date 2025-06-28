@@ -44,16 +44,29 @@ def train(epochs=1, batch_size=64, lr=0.01):
             loss.backward()
             optimizer.step()
 
-    # ✅ Extract all weights and biases easily
-    #for name, module in model.named_modules():
-    #    print(f"Layer Name: {name}, Layer Type: {module.__class__.__name__}")
+    # 組裝結構資訊成 dict
+    model_structure = []
+    for name, module in model.named_modules():
+        if name == "":
+            continue  # skip top-level model itself
+        layer_info = {
+            "layer_name": name,
+            "layer_type": module.__class__.__name__,
+        }
+        params = []
+        for param_name, param in module.named_parameters(recurse=False):
+            params.append({
+                "param_name": param_name,
+                "shape": tuple(param.shape),
+                "values": param.detach().cpu().numpy().tolist()
+            })
+        if params:
+            layer_info["parameters"] = params
+        else:
+            layer_info["parameters"] = None
+        model_structure.append(layer_info)
 
-    #for key, value in model.state_dict().items():
-    #    print(key)
-    #return
-    trained_params = {key: value.detach().cpu().numpy().tolist() for key, value in model.state_dict().items()}
-
-    return json.dumps(trained_params)
+    return json.dumps(model_structure, indent=4)
 
 if __name__ == "__main__":
     trained_json = train()
