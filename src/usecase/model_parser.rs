@@ -1,3 +1,4 @@
+use crate::usecase::trainer::Trainer
 pub struct ModelParser;
 
 impl ModelParser {
@@ -9,4 +10,3 @@ impl ModelParser {
         //
     }
 }
-
