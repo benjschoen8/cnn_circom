@@ -1,8 +1,12 @@
 use crate::entity::layer::Layer;
 
 pub struct Flatten {
-    // Empty Flatten layer
+    pub name: String,
 }
 
-impl Layer for Flatten {}
+impl Layer for Flatten {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+}
 

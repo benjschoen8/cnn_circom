@@ -1,0 +1,12 @@
+use crate::layer::Layer;
+
+pub struct Conv2D {
+    pub weight: Vec<Vec<Vec<Vec<f32>>>>, // shape: [out_channels][in_channels][kernel_height][kernel_width]
+    pub bias: Vec<f32>,                  // shape: [out_channels]
+    pub name: str,
+}
+
+impl Layer for Conv2D {
+    fn getName(&self) -> &str {&self.name}
+}
+

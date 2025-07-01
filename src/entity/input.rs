@@ -1,28 +1,12 @@
-use serde_json::{json, Value};
+use crate::entity::layer::Layer;
 
 pub struct Input {
-    input_string: String,
+    pub shape: Vec<usize>, // e.g. [1, 28, 28] for MNIST
+    pub name: String,
 }
 
-impl Input {
-    pub fn new() -> Self {
-        Self {
-            input_string: String::new(),
-        }
-    }
-
-    pub fn set_string(&mut self, value: String) {
-        self.input_string = value;
-    }
-
-    pub fn get_string(&self) -> &str {
-        &self.input_string
-    }
-
-    pub fn get_json(&self) -> Value {
-        json!({
-            "input": self.input_string
-        })
+impl Layer for Input {
+    fn get_name(&self) -> &str {
+        &self.name
     }
 }
-

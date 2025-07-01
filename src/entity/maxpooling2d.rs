@@ -1,8 +1,12 @@
 use crate::entity::layer::Layer;
 
 pub struct MaxPooling2D {
-    // Empty MaxPooling2D layer
+    pub pool_size: (usize, usize), // e.g. (2, 2)
+    pub name: String,
 }
 
-impl Layer for MaxPooling2D {}
-
+impl Layer for MaxPooling2D {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+}

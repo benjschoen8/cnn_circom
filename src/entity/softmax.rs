@@ -1,8 +1,12 @@
 use crate::entity::layer::Layer;
 
 pub struct Softmax {
-    // Empty Softmax layer
+    pub axis: usize,
+    pub name: String,
 }
 
-impl Layer for Softmax {}
-
+impl Layer for Softmax {
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+}
