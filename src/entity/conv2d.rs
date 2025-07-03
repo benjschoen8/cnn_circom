@@ -1,4 +1,5 @@
 use crate::layer::Layer;
+use std::collections::VecDeque;
 
 pub struct Conv2D {
     pub input_name: String,
@@ -10,6 +11,9 @@ pub struct Conv2D {
     pub stride: usize,
     pub name: String,
     pub to_integer_bias: usize,
+    pub input_signal_list: Vec<String>,
+    pub signal_list: Vec<String>,
+    pub operation_tuples: Vec<(String, String, String, String)>,
 }
 
 impl Conv2D {
@@ -24,6 +28,9 @@ impl Conv2D {
             stride: 1,
             name: String::new(),
             to_integer_bias: 0,
+            input_signal_list: Vec::new(),
+            signal_list: Vec::new(),
+            operation_tuples: Vec::new(),
         }
     }
 
@@ -41,19 +48,9 @@ impl Conv2D {
 }
 
 impl Layer for Conv2D {
-    fn get_name(&self) -> &str {
-        &self.name
-    }
-
-    fn get_operation_tuples(&self) -> Vec<(String, String, String, String)> {
-        let mut operations = Vec::new();
-
+    fn calculate_signals(&mut self) {
         let (in_channels, in_height, in_width) = self.input_size;
-        let (out_channels, weight_in_channels, kernel_height, kernel_width) = self.weight_size;
-
-        if in_channels != weight_in_channels {
-            panic!("Input channels and weight channels do not match in layer {}", self.name);
-        }
+        let (out_channels, _weight_in_channels, kernel_height, kernel_width) = self.weight_size;
 
         let out_height = (in_height + 2 * self.padding - kernel_height) / self.stride + 1;
         let out_width = (in_width + 2 * self.padding - kernel_width) / self.stride + 1;
@@ -61,8 +58,7 @@ impl Layer for Conv2D {
         for out_c in 0..out_channels {
             for out_y in 0..out_height {
                 for out_x in 0..out_width {
-                    let mut sum_name = String::new();
-                    let mut is_first = true;
+                    let mut sum_list: VecDeque<String> = VecDeque::new();
 
                     for in_c in 0..in_channels {
                         for k_y in 0..kernel_height {
@@ -79,49 +75,70 @@ impl Layer for Conv2D {
                                 let weight_name = format!("{}_weight_{}_{}_{}_{}", self.name, out_c, in_c, k_y, k_x);
                                 let prod_name = format!("{}_prod_tmp_{}_{}_{}_{}_{}", self.name, out_c, out_y, out_x, in_c, k_y * kernel_width + k_x);
 
-                                operations.push((
+                                self.input_signal_list.push(weight.clone());
+                                self.signal_list.push(prod_name.clone());
+
+                                // Add multiplication operation
+                                self.operation_tuples.push((
                                     "*".to_string(),
                                     input_name,
                                     weight_name,
                                     prod_name.clone(),
                                 ));
 
-                                if is_first {
-                                    // First addition initializes the sum
-                                    sum_name = format!("{}_sum_tmp_{}_{}_{}", self.name, out_c, out_y, out_x);
-                                    operations.push((
-                                        "+".to_string(),
-                                        prod_name.clone(),
-                                        "0".to_string(),
-                                        sum_name.clone(),
-                                    ));
-                                    is_first = false;
-                                } else {
-                                    let new_sum_name = format!("{}_sum_tmp_{}_{}_{}", self.name, out_c, out_y, out_x);
-                                    operations.push((
-                                        "+".to_string(),
-                                        prod_name.clone(),
-                                        sum_name.clone(),
-                                        new_sum_name.clone(),
-                                    ));
-                                    sum_name = new_sum_name;
-                                }
+                                // Add to sum queue (push to front)
+                                sum_list.push_front(prod_name);
                             }
                         }
                     }
 
+                    // Sum all products two at a time
+                    let mut sum_counter = 0;
+                    while sum_list.len() > 1 {
+                        let a = sum_list.pop_front().unwrap();
+                        let b = sum_list.pop_front().unwrap();
+                        let sum_target = format!("{}_sum_tmp_{}_{}_{}_{}", self.name, out_c, out_y, out_x, sum_counter);
+
+                        self.operation_tuples.push((
+                            "+".to_string(),
+                            a,
+                            b,
+                            sum_target.clone(),
+                        ));
+
+                        sum_list.push_back(sum_target.clone());
+                        self.signal_list.push(sum_target);
+                        sum_counter += 1;
+                    }
+
                     // Add bias at the end
                     let output_name = format!("{}_output_{}_{}_{}", self.name, out_c, out_y, out_x);
-                    operations.push((
+                    let last_sum = sum_list.pop_front().unwrap();
+                    let bias_name = format!("{}_bias_{}_{}_{}_{}", self.name, out_c, out_y, out_x, in_c);
+
+                    self.operation_tuples.push((
                         "+".to_string(),
-                        sum_name.clone(),
-                        format!("{}_bias_{}", self.name, out_c),
-                        output_name,
+                        last_sum,
+                        bias_name.clone(),
+                        output_name.clone(),
                     ));
+
+                    self.input_signal_list.push(bias_name);
+                    self.signal_list.push_back(output_name);
                 }
             }
         }
+    }
 
-        operations
+    fn get_operation_tuples(&self) -> Vec<(String, String, String, String)> {
+        self.operation_tuples.clone()
+    }
+
+    fn get_input_signal_list(&self) -> Vec<String> {
+        self.input_signal_list.clone()
+    }
+
+    fn get_signal_list(&self) -> Vec<String> {
+        self.signal_list.clone()
     }
 }
