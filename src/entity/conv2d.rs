@@ -1,4 +1,4 @@
-use crate::layer::Layer;
+use crate::entity::layer::Layer;
 use std::collections::VecDeque;
 
 pub struct Conv2D {
@@ -45,6 +45,46 @@ impl Conv2D {
     pub fn get_weight_size(&self) -> (usize, usize, usize, usize) {
         self.weight_size
     }
+    pub fn calculate_test(&self, input_values: &Vec<Vec<Vec<f32>>>) -> Vec<Vec<Vec<f32>>> {
+        let (in_channels, in_height, in_width) = self.input_size;
+        let (out_channels, _, kernel_height, kernel_width) = self.weight_size;
+
+        let out_height = (in_height + 2 * self.padding - kernel_height) / self.stride + 1;
+        let out_width = (in_width + 2 * self.padding - kernel_width) / self.stride + 1;
+
+        let mut output = vec![vec![vec![0.0; out_width]; out_height]; out_channels];
+
+        for out_c in 0..out_channels {
+            for out_y in 0..out_height {
+                for out_x in 0..out_width {
+                    let mut sum = 0.0;
+
+                    for in_c in 0..in_channels {
+                        for k_y in 0..kernel_height {
+                            for k_x in 0..kernel_width {
+                                let in_y = out_y * self.stride + k_y as usize - self.padding as usize;
+                                let in_x = out_x * self.stride + k_x as usize - self.padding as usize;
+
+                                if in_y < 0 || in_y >= in_height as usize || in_x < 0 || in_x >= in_width as usize {
+                                    continue;
+                                }
+
+                                let input_value = input_values[in_c][in_y as usize][in_x as usize];
+                                let weight_value = self.weight[out_c][in_c][k_y][k_x];
+
+                                sum += input_value * weight_value;
+                            }
+                        }
+                    }
+
+                    sum += self.bias[out_c];
+                    output[out_c][out_y][out_x] = sum;
+                }
+            }
+        }
+
+        output
+    }
 }
 
 impl Layer for Conv2D {
@@ -63,11 +103,11 @@ impl Layer for Conv2D {
                     for in_c in 0..in_channels {
                         for k_y in 0..kernel_height {
                             for k_x in 0..kernel_width {
-                                let in_y = out_y * self.stride + k_y as isize - self.padding as isize;
-                                let in_x = out_x * self.stride + k_x as isize - self.padding as isize;
+                                let in_y = out_y * self.stride + k_y as usize - self.padding as usize;
+                                let in_x = out_x * self.stride + k_x as usize - self.padding as usize;
 
                                 // Skip if out of bounds (zero padding)
-                                if in_y < 0 || in_y >= in_height as isize || in_x < 0 || in_x >= in_width as isize {
+                                if in_y < 0 || in_y >= in_height as usize || in_x < 0 || in_x >= in_width as usize {
                                     continue;
                                 }
 
@@ -75,7 +115,7 @@ impl Layer for Conv2D {
                                 let weight_name = format!("{}_weight_{}_{}_{}_{}", self.name, out_c, in_c, k_y, k_x);
                                 let prod_name = format!("{}_prod_tmp_{}_{}_{}_{}_{}", self.name, out_c, out_y, out_x, in_c, k_y * kernel_width + k_x);
 
-                                self.input_signal_list.push(weight.clone());
+                                self.input_signal_list.push(weight_name.clone());
                                 self.signal_list.push(prod_name.clone());
 
                                 // Add multiplication operation
@@ -114,7 +154,7 @@ impl Layer for Conv2D {
                     // Add bias at the end
                     let output_name = format!("{}_output_{}_{}_{}", self.name, out_c, out_y, out_x);
                     let last_sum = sum_list.pop_front().unwrap();
-                    let bias_name = format!("{}_bias_{}_{}_{}_{}", self.name, out_c, out_y, out_x, in_c);
+                    let bias_name = format!("{}_bias_{}_{}_{}", self.name, out_c, out_y, out_x);
 
                     self.operation_tuples.push((
                         "+".to_string(),
@@ -124,7 +164,7 @@ impl Layer for Conv2D {
                     ));
 
                     self.input_signal_list.push(bias_name);
-                    self.signal_list.push_back(output_name);
+                    self.signal_list.push(output_name);
                 }
             }
         }
